@@ -15,4 +15,7 @@ func TestSkipList_Set(t *testing.T) {
 	for i := 0; i < batch; i++ {
 		fmt.Println(s.Get(i))
 	}
+
+	s.Del(6)
+	fmt.Println(s.print())
 }
