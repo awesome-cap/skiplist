@@ -4,24 +4,28 @@ import (
 	"bytes"
 	"fmt"
 	"math/rand"
+	"time"
 	"unsafe"
 )
 
 type SkipList struct {
-	limit   int
-	level   int
-	headers []*entry
+	limit  int
+	level  int
+	size   int
+	header *entry
+	rand   *rand.Rand
 }
 
 type entry struct {
-	k    interface{}
-	p    unsafe.Pointer
-	hash uint64
-	next []*entry
+	k     interface{}
+	p     unsafe.Pointer
+	hash  uint64
+	level int
+	next  []*entry
 }
 
-func (e *entry) level() int {
-	return len(e.next) - 1
+func newEntry(k, v interface{}, level int) *entry {
+	return &entry{k: k, p: unsafe.Pointer(&v), hash: hash(k), level: level, next: make([]*entry, level+1)}
 }
 
 func (e *entry) value() interface{} {
@@ -30,187 +34,73 @@ func (e *entry) value() interface{} {
 
 func New(limit int) SkipList {
 	return SkipList{
-		limit:   limit,
-		headers: make([]*entry, limit),
+		limit:  limit,
+		header: newEntry(nil, nil, limit),
+		rand:   rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
 func (s SkipList) random() int {
 	i := 0
-	for i < s.limit && rand.Float32() <= 0.25 {
+	for i < s.limit && s.rand.Float64() <= 0.25 {
 		i++
 	}
 	return i
 }
 
 func (s *SkipList) Set(k, v interface{}) {
-	h, p := hash(k), unsafe.Pointer(&v)
-	e := &entry{k: k, p: p, hash: h, next: make([]*entry, s.random()+1)}
-	if len(s.headers) == 0 || (s.level == 0 && s.headers[s.level] == nil) {
-		if len(s.headers) == 0 {
-			s.headers = make([]*entry, e.level()+1)
-		}
-		for i := 0; i <= e.level(); i++ {
-			s.headers[i] = e
-		}
-		s.level = max(s.level, e.level())
+	e := newEntry(k, v, s.random())
+	if s.size == 0 {
+		s.level = e.level
+		s.size++
+		s.header.next[0] = e
 		return
 	}
-	level := s.level
-	next := s.headers[level]
-	var prev *entry
-	var pres = make([]*entry, e.level()+1)
-	for {
-		if next == nil {
-			if level < len(pres) {
-				pres[level] = prev
+	prev := s.header
+	pres := make([]*entry, e.level+1)
+	for l := max(s.level, e.level); l >= 0; l-- {
+		next := prev.next[l]
+		for next != nil && e.hash >= next.hash {
+			if e.k == next.k {
+				next.p = e.p
+				return
 			}
-			if level > 0 {
-				level--
-				if prev != nil {
-					next = prev.next[level]
-				}
-				continue
-			}
-			break
+			prev = next
+			next = next.next[l]
 		}
-		if next.k == k {
-			next.p = e.p
-			return
+		if l <= e.level {
+			pres[l] = prev
 		}
-		if h < next.hash {
-			if level < len(pres) {
-				pres[level] = prev
-			}
-			if level > 0 {
-				level--
-				if prev == nil {
-					next = s.headers[level]
-				} else {
-					next = prev.next[level]
-				}
-				continue
-			}
-			break
-		}
-		prev = next
-		next = next.next[level]
 	}
 	for i := 0; i < len(pres); i++ {
-		if pres[i] == nil {
-			e.next[i] = s.headers[i]
-			s.headers[i] = e
-		} else {
-			e.next[i] = pres[i].next[i]
-			pres[i].next[i] = e
-		}
+		e.next[i] = pres[i].next[i]
+		pres[i].next[i] = e
 	}
-	s.level = max(s.level, e.level())
+	s.size++
+	s.level = max(s.level, e.level)
 }
 
 func (s SkipList) Get(k interface{}) (interface{}, bool) {
-	if len(s.headers) == 0 {
-		return nil, false
-	}
+	prev := s.header
 	h := hash(k)
-	level := s.level
-	next := s.headers[level]
-	var prev *entry
-	for {
-		if next == nil {
-			if level > 0 {
-				level--
-				if prev != nil {
-					next = prev.next[level]
-				}
-				continue
+	for l := s.level; l >= 0; l-- {
+		next := prev
+		for next = next.next[l]; next != nil && h >= next.hash; {
+			if k == next.k {
+				return next.value(), true
 			}
-			break
+			prev = next
+			next = next.next[l]
 		}
-		if next.k == k {
-			return next.value(), true
-		}
-		if h < next.hash {
-			if level == 0 {
-				return nil, false
-			}
-			level--
-			if prev == nil {
-				next = s.headers[level]
-			} else {
-				next = prev.next[level]
-			}
-			continue
-		}
-		prev = next
-		next = next.next[level]
 	}
 	return nil, false
-}
-
-func (s *SkipList) Del(k interface{}) bool {
-	if len(s.headers) == 0 {
-		return false
-	}
-	h := hash(k)
-	level := s.level
-	next := s.headers[level]
-	var prev *entry
-	var pres = make([]*entry, s.level+1)
-	for {
-		if next == nil {
-			if level < len(pres) {
-				pres[level] = prev
-			}
-			if level > 0 {
-				level--
-				if prev != nil {
-					next = prev.next[level]
-				}
-				continue
-			}
-			break
-		}
-		if next.k == k && level == 0 {
-			pres[level] = prev
-			for i := 0; i <= next.level(); i++ {
-				if pres[i] == nil {
-					s.headers[i] = next.next[i]
-				} else {
-					pres[i] = next.next[i]
-				}
-			}
-			// skip list level
-			l := s.level
-			for ; l >= 0 && s.headers[l] == nil; l-- {
-			}
-			s.level = l
-			return true
-		}
-		if next.k == k || h < next.hash {
-			if h < next.hash && level == 0 {
-				return false
-			}
-			pres[level] = prev
-			level--
-			if prev == nil {
-				next = s.headers[level]
-			} else {
-				next = prev.next[level]
-			}
-			continue
-		}
-		prev = next
-		next = next.next[level]
-	}
-	return false
 }
 
 func (s SkipList) print() string {
 	buf := bytes.Buffer{}
 	for i := s.level; i >= 0; i-- {
 		buf.WriteString("||->")
-		next := s.headers[i]
+		next := s.header.next[i]
 		for next != nil {
 			buf.WriteString(fmt.Sprintf("%v", next.value()))
 			buf.WriteString("->")
