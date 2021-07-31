@@ -42,7 +42,7 @@ func New(limit int) SkipList {
 
 func (s SkipList) random() int {
 	i := 0
-	for i < s.limit && s.rand.Float64() <= 0.3 {
+	for i < s.limit && s.rand.Float64() <= 0.29 {
 		i++
 	}
 	return i
@@ -71,7 +71,7 @@ func (s *SkipList) Set(k, v interface{}) {
 			pres[l] = prev
 		}
 	}
-	for i := 0; i < len(pres); i++ {
+	for i := 0; i <= e.level; i++ {
 		if pres[i] == nil {
 			e.next[i] = s.header.next[i]
 			s.header.next[i] = e
@@ -88,8 +88,8 @@ func (s SkipList) Get(k interface{}) (interface{}, bool) {
 	prev := s.header
 	h := hash(k)
 	for l := s.level; l >= 0; l-- {
-		next := prev
-		for next = next.next[l]; next != nil && h >= next.hash; {
+		next := prev.next[l]
+		for next != nil && h >= next.hash {
 			if k == next.k {
 				return next.value(), true
 			}

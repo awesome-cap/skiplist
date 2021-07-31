@@ -49,6 +49,7 @@ func TestSkipList_Set2(t *testing.T) {
 	}
 	end = time.Now().UnixNano()
 	t.Log("get time: ", (end-start)/1e6)
+	t.Log("size", s.size)
 }
 
 func TestSkipList_Set(t *testing.T) {
@@ -73,6 +74,8 @@ func TestSkipList_Set(t *testing.T) {
 	}
 	end = time.Now().UnixNano()
 	t.Log("get time: ", (end-start)/1e6)
+	t.Log("size", s.size)
+	t.Log("level", s.level)
 }
 
 func TestJumpList_Set(t *testing.T) {
