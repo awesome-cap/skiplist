@@ -52,7 +52,7 @@ func TestSkipList_Set2(t *testing.T) {
 }
 
 func TestSkipList_Set(t *testing.T) {
-	s := New(18)
+	s := New(20)
 	batch := 1000000
 	start := time.Now().UnixNano()
 	for i := 0; i < batch; i++ {

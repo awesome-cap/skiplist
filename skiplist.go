@@ -42,23 +42,22 @@ func New(limit int) SkipList {
 
 func (s SkipList) random() int {
 	i := 0
-	for i < s.limit && s.rand.Float64() <= 0.25 {
+	for i < s.limit && s.rand.Float64() <= 0.3 {
 		i++
 	}
 	return i
 }
 
 func (s *SkipList) Set(k, v interface{}) {
-	e := newEntry(k, v, s.random())
 	if s.size == 0 {
-		s.level = e.level
 		s.size++
-		s.header.next[0] = e
+		s.header.next[0] = newEntry(k, v, 0)
 		return
 	}
+	e := newEntry(k, v, s.random())
 	prev := s.header
 	pres := make([]*entry, e.level+1)
-	for l := max(s.level, e.level); l >= 0; l-- {
+	for l := s.level; l >= 0; l-- {
 		next := prev.next[l]
 		for next != nil && e.hash >= next.hash {
 			if e.k == next.k {
@@ -73,8 +72,13 @@ func (s *SkipList) Set(k, v interface{}) {
 		}
 	}
 	for i := 0; i < len(pres); i++ {
-		e.next[i] = pres[i].next[i]
-		pres[i].next[i] = e
+		if pres[i] == nil {
+			e.next[i] = s.header.next[i]
+			s.header.next[i] = e
+		} else {
+			e.next[i] = pres[i].next[i]
+			pres[i].next[i] = e
+		}
 	}
 	s.size++
 	s.level = max(s.level, e.level)
