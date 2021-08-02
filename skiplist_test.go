@@ -1,168 +1,89 @@
 package skiplist
 
 import (
-	"github.com/abbychau/jumplist"
-	"math/rand"
 	"sync"
 	"testing"
 )
 
-var (
-	arr   []int
-	batch = 1000 * 10000
-)
+func TestNew(t *testing.T) {
+	New(18)
+}
 
-func init() {
+func TestCorrectness(t *testing.T) {
+	s := New(18)
+	batch := 100 * 10000
 	for i := 0; i < batch; i++ {
-		arr = append(arr, rand.Int())
+		s.Set(i, i)
+	}
+	for i := 0; i < batch; i++ {
+		v, ok := s.Get(i)
+		if !ok || v != i {
+			t.Fatal("get value not equal to ", i)
+		}
+	}
+	for i := 0; i < batch/2; i++ {
+		if !s.Del(i) {
+			t.Fatal("del err at", i)
+		}
+	}
+	for i := 0; i < batch/2; i++ {
+		_, ok := s.Get(i)
+		if ok {
+			t.Fatal("get deleted value err", i)
+		}
+	}
+	for i := batch / 2; i < batch; i++ {
+		v, ok := s.Get(i)
+		if !ok || v != i {
+			t.Fatal("get not deleted value err", i)
+		}
 	}
 }
 
-type tester interface {
-	Set(b *testing.B)
-	Get(b *testing.B)
-	SetRand(b *testing.B)
-	GetRand(b *testing.B)
-}
+func TestParallel(t *testing.T) {
+	s := New(18)
+	batch := 100 * 10000
 
-func newSkipListTester() tester {
-	return &skipListTester{s: New(18)}
-}
-
-func newJumpListTester() tester {
-	return &jumpListTester{s: jumplist.New()}
-}
-
-type skipListTester struct {
-	s *SkipList
-}
-
-func (s *skipListTester) Set(b *testing.B) {
-	for j := 0; j < b.N; j++ {
-		s.s.Set(float64(j), j)
-	}
-}
-
-func (s *skipListTester) Get(b *testing.B) {
-	for j := 0; j < b.N; j++ {
-		s.s.Get(float64(j))
-	}
-}
-
-func (s *skipListTester) SetRand(b *testing.B) {
-	for j := 0; j < b.N; j++ {
-		s.s.Set(float64(arr[j]), arr[j])
-	}
-}
-
-func (s *skipListTester) GetRand(b *testing.B) {
-	for j := 0; j < b.N; j++ {
-		s.s.Get(float64(arr[j]))
-	}
-}
-
-type jumpListTester struct {
-	s *jumplist.SkipList
-}
-
-func (s *jumpListTester) Set(b *testing.B) {
-	for j := 0; j < b.N; j++ {
-		s.s.Set(float64(j), j)
-	}
-}
-
-func (s *jumpListTester) Get(b *testing.B) {
-	for j := 0; j < b.N; j++ {
-		s.s.Get(float64(j))
-	}
-}
-
-func (s *jumpListTester) SetRand(b *testing.B) {
-	for j := 0; j < b.N; j++ {
-		s.s.Set(float64(arr[j]), arr[j])
-	}
-}
-
-func (s *jumpListTester) GetRand(b *testing.B) {
-	for j := 0; j < b.N; j++ {
-		s.s.Get(float64(arr[j]))
-	}
-}
-
-func testSet(b *testing.B, t tester) {
-	b.ResetTimer()
-	t.Set(b)
-}
-
-func testSetRandom(b *testing.B, t tester) {
-	b.ResetTimer()
-	t.SetRand(b)
-}
-
-func testSetAndGet(b *testing.B, t tester) {
-	b.ResetTimer()
-	t.Set(b)
-	t.Get(b)
-}
-
-func testSetRandomAndGetRandom(b *testing.B, t tester) {
-	b.ResetTimer()
-	t.SetRand(b)
-	t.GetRand(b)
-}
-
-func testSetAndGetAsync(b *testing.B, t tester) {
-	b.ResetTimer()
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 	go func() {
-		t.Set(b)
+		for i := 0; i < batch/2; i++ {
+			s.Set(i, i)
+		}
 		wg.Done()
 	}()
 	go func() {
-		t.Get(b)
+		for i := batch / 4; i < batch; i++ {
+			s.Set(i, i)
+		}
 		wg.Done()
 	}()
 	wg.Wait()
-}
-
-func testSetRandomAndGetRandomAsync(b *testing.B, t tester) {
-	b.ResetTimer()
-	wg := sync.WaitGroup{}
+	for i := 0; i < batch; i++ {
+		v, ok := s.Get(i)
+		if !ok || v != i {
+			t.Fatal("get value not equal to ", i)
+		}
+	}
 	wg.Add(2)
 	go func() {
-		t.SetRand(b)
+		for i := 0; i < batch/2; i++ {
+			s.Del(i)
+		}
 		wg.Done()
 	}()
 	go func() {
-		t.GetRand(b)
+		for i := batch / 4; i < batch; i++ {
+			s.Del(i)
+		}
 		wg.Done()
 	}()
 	wg.Wait()
-}
-
-func BenchmarkSkipList_Set(b *testing.B) { testSet(b, newSkipListTester()) }
-func BenchmarkJumpList_Set(b *testing.B) { testSet(b, newJumpListTester()) }
-
-func BenchmarkSkipList_SetRandom(b *testing.B) { testSetRandom(b, newSkipListTester()) }
-func BenchmarkJumpList_SetRandom(b *testing.B) { testSetRandom(b, newJumpListTester()) }
-
-func BenchmarkSkipList_SetAndGet(b *testing.B) { testSetAndGet(b, newSkipListTester()) }
-func BenchmarkJumpList_SetAndGet(b *testing.B) { testSetAndGet(b, newJumpListTester()) }
-
-func BenchmarkSkipList_SetRandomAndGetRandom(b *testing.B) {
-	testSetRandomAndGetRandom(b, newSkipListTester())
-}
-func BenchmarkJumpList_SetRandomAndGetRandom(b *testing.B) {
-	testSetRandomAndGetRandom(b, newJumpListTester())
-}
-
-func BenchmarkSkipList_SetAndGetAsync(b *testing.B) { testSetAndGetAsync(b, newSkipListTester()) }
-func BenchmarkJumpList_SetAndGetAsync(b *testing.B) { testSetAndGetAsync(b, newJumpListTester()) }
-
-func BenchmarkSkipList_SetRandomAndGetRandomAsync(b *testing.B) {
-	testSetRandomAndGetRandomAsync(b, newSkipListTester())
-}
-func BenchmarkJumpList_SetRandomAndGetRandomAsync(b *testing.B) {
-	testSetRandomAndGetRandomAsync(b, newJumpListTester())
+	for i := 0; i < batch; i++ {
+		_, ok := s.Get(i)
+		if ok {
+			t.Fatal("get deleted value err", i)
+		}
+	}
+	wg.Wait()
 }

@@ -23,8 +23,8 @@ type entry struct {
 	next []*entry
 }
 
-func newEntry(k, v interface{}, level int) *entry {
-	return &entry{k: k, p: unsafe.Pointer(&v), hash: hash(k), next: make([]*entry, level+1)}
+func newEntry(k, v interface{}, hash uint64, level int) *entry {
+	return &entry{k: k, p: unsafe.Pointer(&v), hash: hash, next: make([]*entry, level+1)}
 }
 
 func (e *entry) value() interface{} {
@@ -38,7 +38,7 @@ func (e *entry) level() int {
 func New(limit int) *SkipList {
 	return &SkipList{
 		limit: limit,
-		head:  newEntry(nil, nil, limit),
+		head:  newEntry(nil, nil, 0, limit),
 		prev:  make([]*entry, limit),
 		rand:  rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
@@ -69,7 +69,7 @@ func (s *SkipList) Set(k, v interface{}) {
 		s.prev[l] = prev
 	}
 	s.size++
-	e := &entry{k: k, p: unsafe.Pointer(&v), hash: h, next: make([]*entry, s.random()+1)}
+	e := newEntry(k, v, h, s.random())
 	for i := 0; i <= e.level(); i++ {
 		e.next[i] = s.prev[i].next[i]
 		s.prev[i].next[i] = e
@@ -90,4 +90,31 @@ func (s *SkipList) Get(k interface{}) (interface{}, bool) {
 		}
 	}
 	return nil, false
+}
+
+func (s *SkipList) Del(k interface{}) bool {
+	s.Lock()
+	defer s.Unlock()
+	h, prev := hash(k), s.head
+	var target *entry
+	for l := s.limit - 1; l >= 0; l-- {
+		next := prev.next[l]
+		for next != nil && h >= next.hash {
+			if h == next.hash && next.k == k {
+				target = next
+				break
+			}
+			prev = next
+			next = next.next[l]
+		}
+		s.prev[l] = prev
+	}
+	if target == nil {
+		return false
+	}
+	s.size--
+	for i := 0; i <= target.level(); i++ {
+		s.prev[i].next[i] = target.next[i]
+	}
+	return true
 }
