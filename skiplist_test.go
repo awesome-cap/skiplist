@@ -2,118 +2,167 @@ package skiplist
 
 import (
 	"github.com/abbychau/jumplist"
+	"math/rand"
+	"sync"
 	"testing"
-	"time"
 )
 
-func TestSkipList_MakeArr(t *testing.T) {
-	batch := 1000000
-	start := time.Now().UnixNano()
+var (
+	arr   []int
+	batch = 1000 * 10000
+)
+
+func init() {
 	for i := 0; i < batch; i++ {
-		_ = make([]*entry, 10)
+		arr = append(arr, rand.Int())
 	}
-	end := time.Now().UnixNano()
-	t.Log("set time: ", (end-start)/1e6)
 }
 
-func TestSkipList_Hash(t *testing.T) {
-	batch := 1000000
-	start := time.Now().UnixNano()
-	for i := 0; i < batch; i++ {
-		hash(i)
-	}
-	end := time.Now().UnixNano()
-	t.Log("set time: ", (end-start)/1e6)
+type tester interface {
+	Set(b *testing.B)
+	Get(b *testing.B)
+	SetRand(b *testing.B)
+	GetRand(b *testing.B)
 }
 
-func TestSkipList_Random(t *testing.T) {
-	s := New(18)
-	batch := 1000000
-	start := time.Now().UnixNano()
-	for i := 0; i < batch; i++ {
-		s.random()
-	}
-	end := time.Now().UnixNano()
-	t.Log("set time: ", (end-start)/1e6)
+func newSkipListTester() tester {
+	return &skipListTester{s: New(18)}
 }
 
-func TestSkipList_Set2(t *testing.T) {
-	s := New(18)
-	batch := 100
-	start := time.Now().UnixNano()
-	for i := 0; i < batch; i++ {
-		s.Set(i, i)
-	}
-	end := time.Now().UnixNano()
-	t.Log("set time: ", (end-start)/1e6)
-
-	start = time.Now().UnixNano()
-	for i := 0; i < batch; i++ {
-		v, ok := s.Get(i)
-		if !ok {
-			t.Fatal("get err", i)
-		}
-		if v != i {
-			t.Fatal("v not equal i")
-		}
-	}
-	end = time.Now().UnixNano()
-	t.Log("get time: ", (end-start)/1e6)
-	t.Log("size", s.size)
+func newJumpListTester() tester {
+	return &jumpListTester{s: jumplist.New()}
 }
 
-func TestSkipList_Set(t *testing.T) {
-	s := New(20)
-	batch := 1000000
-	start := time.Now().UnixNano()
-	for i := 0; i < batch; i++ {
-		s.Set(i, i)
-	}
-	end := time.Now().UnixNano()
-	t.Log("set time: ", (end-start)/1e6)
-
-	start = time.Now().UnixNano()
-	for i := 0; i < batch; i++ {
-		v, ok := s.Get(i)
-		if !ok {
-			t.Fatal("get err", i)
-		}
-		if v != i {
-			t.Fatal("v not equal i")
-		}
-	}
-	end = time.Now().UnixNano()
-	t.Log("get time: ", (end-start)/1e6)
-	t.Log("size", s.size)
-	t.Log("level", s.level)
+type skipListTester struct {
+	s *SkipList
 }
 
-func TestJumpList_Set(t *testing.T) {
-	s := jumplist.New()
-	batch := 1000000
-	start := time.Now().UnixNano()
-	for i := 0; i < batch; i++ {
-		s.Set(float64(i), i)
+func (s *skipListTester) Set(b *testing.B) {
+	for j := 0; j < b.N; j++ {
+		s.s.Set(float64(j), j)
 	}
-	end := time.Now().UnixNano()
-	t.Log("set time: ", (end-start)/1e6)
-
-	start = time.Now().UnixNano()
-	for i := 0; i < batch; i++ {
-		v := s.Get(float64(i))
-		if v.Value != i {
-			t.Fatal("v not equal i")
-		}
-	}
-	end = time.Now().UnixNano()
-	t.Log("get time: ", (end-start)/1e6)
 }
 
-func BenchmarkSkipList_Set(b *testing.B) {
+func (s *skipListTester) Get(b *testing.B) {
+	for j := 0; j < b.N; j++ {
+		s.s.Get(float64(j))
+	}
+}
+
+func (s *skipListTester) SetRand(b *testing.B) {
+	for j := 0; j < b.N; j++ {
+		s.s.Set(float64(arr[j]), arr[j])
+	}
+}
+
+func (s *skipListTester) GetRand(b *testing.B) {
+	for j := 0; j < b.N; j++ {
+		s.s.Get(float64(arr[j]))
+	}
+}
+
+type jumpListTester struct {
+	s *jumplist.SkipList
+}
+
+func (s *jumpListTester) Set(b *testing.B) {
+	for j := 0; j < b.N; j++ {
+		s.s.Set(float64(j), j)
+	}
+}
+
+func (s *jumpListTester) Get(b *testing.B) {
+	for j := 0; j < b.N; j++ {
+		s.s.Get(float64(j))
+	}
+}
+
+func (s *jumpListTester) SetRand(b *testing.B) {
+	for j := 0; j < b.N; j++ {
+		s.s.Set(float64(arr[j]), arr[j])
+	}
+}
+
+func (s *jumpListTester) GetRand(b *testing.B) {
+	for j := 0; j < b.N; j++ {
+		s.s.Get(float64(arr[j]))
+	}
+}
+
+func testSet(b *testing.B, t tester) {
 	b.ResetTimer()
-	s := New(48)
-	batch := 1000000
-	for i := 0; i < batch; i++ {
-		s.Set(i, i)
-	}
+	t.Set(b)
+}
+
+func testSetRandom(b *testing.B, t tester) {
+	b.ResetTimer()
+	t.SetRand(b)
+}
+
+func testSetAndGet(b *testing.B, t tester) {
+	b.ResetTimer()
+	t.Set(b)
+	t.Get(b)
+}
+
+func testSetRandomAndGetRandom(b *testing.B, t tester) {
+	b.ResetTimer()
+	t.SetRand(b)
+	t.GetRand(b)
+}
+
+func testSetAndGetAsync(b *testing.B, t tester) {
+	b.ResetTimer()
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	go func() {
+		t.Set(b)
+		wg.Done()
+	}()
+	go func() {
+		t.Get(b)
+		wg.Done()
+	}()
+	wg.Wait()
+}
+
+func testSetRandomAndGetRandomAsync(b *testing.B, t tester) {
+	b.ResetTimer()
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	go func() {
+		t.SetRand(b)
+		wg.Done()
+	}()
+	go func() {
+		t.GetRand(b)
+		wg.Done()
+	}()
+	wg.Wait()
+}
+
+func BenchmarkSkipList_Set(b *testing.B) { testSet(b, newSkipListTester()) }
+func BenchmarkJumpList_Set(b *testing.B) { testSet(b, newJumpListTester()) }
+
+func BenchmarkSkipList_SetRandom(b *testing.B) { testSetRandom(b, newSkipListTester()) }
+func BenchmarkJumpList_SetRandom(b *testing.B) { testSetRandom(b, newJumpListTester()) }
+
+func BenchmarkSkipList_SetAndGet(b *testing.B) { testSetAndGet(b, newSkipListTester()) }
+func BenchmarkJumpList_SetAndGet(b *testing.B) { testSetAndGet(b, newJumpListTester()) }
+
+func BenchmarkSkipList_SetRandomAndGetRandom(b *testing.B) {
+	testSetRandomAndGetRandom(b, newSkipListTester())
+}
+func BenchmarkJumpList_SetRandomAndGetRandom(b *testing.B) {
+	testSetRandomAndGetRandom(b, newJumpListTester())
+}
+
+func BenchmarkSkipList_SetAndGetAsync(b *testing.B) { testSetAndGetAsync(b, newSkipListTester()) }
+func BenchmarkJumpList_SetAndGetAsync(b *testing.B) { testSetAndGetAsync(b, newJumpListTester()) }
+
+func BenchmarkSkipList_SetRandomAndGetRandomAsync(b *testing.B) {
+	testSetRandomAndGetRandomAsync(b, newSkipListTester())
+}
+func BenchmarkJumpList_SetRandomAndGetRandomAsync(b *testing.B) {
+	testSetRandomAndGetRandomAsync(b, newJumpListTester())
 }

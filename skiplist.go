@@ -1,16 +1,15 @@
 package skiplist
 
 import (
-	"bytes"
-	"fmt"
 	"math/rand"
+	"sync"
 	"time"
 	"unsafe"
 )
 
 type SkipList struct {
+	sync.Mutex
 	limit int
-	level int
 	size  int
 	head  *entry
 	prev  []*entry
@@ -36,8 +35,8 @@ func (e *entry) level() int {
 	return len(e.next) - 1
 }
 
-func New(limit int) SkipList {
-	return SkipList{
+func New(limit int) *SkipList {
+	return &SkipList{
 		limit: limit,
 		head:  newEntry(nil, nil, limit),
 		prev:  make([]*entry, limit),
@@ -45,7 +44,7 @@ func New(limit int) SkipList {
 	}
 }
 
-func (s SkipList) random() int {
+func (s *SkipList) random() int {
 	i := 0
 	for i < s.limit && s.rand.Float64() <= 0.29 {
 		i++
@@ -54,18 +53,20 @@ func (s SkipList) random() int {
 }
 
 func (s *SkipList) Set(k, v interface{}) {
+	s.Lock()
+	defer s.Unlock()
 	h, prev := hash(k), s.head
 	for l := s.limit - 1; l >= 0; l-- {
 		next := prev.next[l]
 		for next != nil && h >= next.hash {
+			if h == next.hash && next.k == k {
+				next.p = unsafe.Pointer(&v)
+				return
+			}
 			prev = next
 			next = next.next[l]
 		}
 		s.prev[l] = prev
-	}
-	if prev.k == k {
-		prev.p = unsafe.Pointer(&v)
-		return
 	}
 	s.size++
 	e := &entry{k: k, p: unsafe.Pointer(&v), hash: h, next: make([]*entry, s.random()+1)}
@@ -75,40 +76,18 @@ func (s *SkipList) Set(k, v interface{}) {
 	}
 }
 
-func (s SkipList) Get(k interface{}) (interface{}, bool) {
+func (s *SkipList) Get(k interface{}) (interface{}, bool) {
 	prev := s.head
 	h := hash(k)
 	for l := s.limit - 1; l >= 0; l-- {
 		next := prev.next[l]
 		for next != nil && h >= next.hash {
+			if h == next.hash && next.k == k {
+				return next.value(), true
+			}
 			prev = next
 			next = next.next[l]
 		}
 	}
-	if prev.k == k {
-		return prev.value(), true
-	}
 	return nil, false
-}
-
-func (s SkipList) print() string {
-	buf := bytes.Buffer{}
-	for i := s.level; i >= 0; i-- {
-		buf.WriteString("||->")
-		next := s.head.next[i]
-		for next != nil {
-			buf.WriteString(fmt.Sprintf("%v", next.value()))
-			buf.WriteString("->")
-			next = next.next[i]
-		}
-		buf.WriteString("\n")
-	}
-	return buf.String()
-}
-
-func max(i, j int) int {
-	if i > j {
-		return i
-	}
-	return j
 }
