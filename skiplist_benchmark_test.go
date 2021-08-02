@@ -26,7 +26,7 @@ type tester interface {
 }
 
 func newSkipListTester() tester {
-	return &skipListTester{s: New(18)}
+	return &skipListTester{s: New(12)}
 }
 
 func newJumpListTester() tester {
@@ -39,25 +39,25 @@ type skipListTester struct {
 
 func (s *skipListTester) Set(b *testing.B) {
 	for j := 0; j < b.N; j++ {
-		s.s.Set(float64(j), j)
+		s.s.Set(j, j)
 	}
 }
 
 func (s *skipListTester) Get(b *testing.B) {
 	for j := 0; j < b.N; j++ {
-		s.s.Get(float64(j))
+		s.s.Get(j)
 	}
 }
 
 func (s *skipListTester) SetRand(b *testing.B) {
 	for j := 0; j < b.N; j++ {
-		s.s.Set(float64(arr[j]), arr[j])
+		s.s.Set(arr[j], arr[j])
 	}
 }
 
 func (s *skipListTester) GetRand(b *testing.B) {
 	for j := 0; j < b.N; j++ {
-		s.s.Get(float64(arr[j]))
+		s.s.Get(arr[j])
 	}
 }
 
@@ -94,9 +94,21 @@ func testSet(b *testing.B, t tester) {
 	t.Set(b)
 }
 
+func testGet(b *testing.B, t tester) {
+	t.Set(b)
+	b.ResetTimer()
+	t.Get(b)
+}
+
 func testSetRandom(b *testing.B, t tester) {
 	b.ResetTimer()
 	t.SetRand(b)
+}
+
+func testGetRandom(b *testing.B, t tester) {
+	t.SetRand(b)
+	b.ResetTimer()
+	t.GetRand(b)
 }
 
 func testSetAndGet(b *testing.B, t tester) {
@@ -153,8 +165,14 @@ func testSetParallel(b *testing.B, t tester) {
 func BenchmarkSet_SkipList(b *testing.B) { testSet(b, newSkipListTester()) }
 func BenchmarkSet_JumpList(b *testing.B) { testSet(b, newJumpListTester()) }
 
+func BenchmarkGet_SkipList(b *testing.B) { testGet(b, newSkipListTester()) }
+func BenchmarkGet_JumpList(b *testing.B) { testGet(b, newJumpListTester()) }
+
 func BenchmarkSetRandom_SkipList(b *testing.B) { testSetRandom(b, newSkipListTester()) }
 func BenchmarkSetRandom_JumpList(b *testing.B) { testSetRandom(b, newJumpListTester()) }
+
+func BenchmarkGetRandom_SkipList(b *testing.B) { testGetRandom(b, newSkipListTester()) }
+func BenchmarkGetRandom_JumpList(b *testing.B) { testGetRandom(b, newJumpListTester()) }
 
 func BenchmarkSetAndGet_SkipList(b *testing.B) { testSetAndGet(b, newSkipListTester()) }
 func BenchmarkSetAndGet_JumpList(b *testing.B) { testSetAndGet(b, newJumpListTester()) }
