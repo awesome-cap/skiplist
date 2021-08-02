@@ -6,6 +6,16 @@ import (
 	"time"
 )
 
+func TestSkipList_MakeArr(t *testing.T) {
+	batch := 1000000
+	start := time.Now().UnixNano()
+	for i := 0; i < batch; i++ {
+		_ = make([]*entry, 10)
+	}
+	end := time.Now().UnixNano()
+	t.Log("set time: ", (end-start)/1e6)
+}
+
 func TestSkipList_Hash(t *testing.T) {
 	batch := 1000000
 	start := time.Now().UnixNano()
@@ -90,7 +100,10 @@ func TestJumpList_Set(t *testing.T) {
 
 	start = time.Now().UnixNano()
 	for i := 0; i < batch; i++ {
-		s.Get(float64(i))
+		v := s.Get(float64(i))
+		if v.Value != i {
+			t.Fatal("v not equal i")
+		}
 	}
 	end = time.Now().UnixNano()
 	t.Log("get time: ", (end-start)/1e6)

@@ -9,34 +9,39 @@ import (
 )
 
 type SkipList struct {
-	limit  int
-	level  int
-	size   int
-	header *entry
-	rand   *rand.Rand
+	limit int
+	level int
+	size  int
+	head  *entry
+	prev  []*entry
+	rand  *rand.Rand
 }
 
 type entry struct {
-	k     interface{}
-	p     unsafe.Pointer
-	hash  uint64
-	level int
-	next  []*entry
+	k    interface{}
+	p    unsafe.Pointer
+	hash uint64
+	next []*entry
 }
 
 func newEntry(k, v interface{}, level int) *entry {
-	return &entry{k: k, p: unsafe.Pointer(&v), hash: hash(k), level: level, next: make([]*entry, level+1)}
+	return &entry{k: k, p: unsafe.Pointer(&v), hash: hash(k), next: make([]*entry, level+1)}
 }
 
 func (e *entry) value() interface{} {
 	return *(*interface{})(e.p)
 }
 
+func (e *entry) level() int {
+	return len(e.next) - 1
+}
+
 func New(limit int) SkipList {
 	return SkipList{
-		limit:  limit,
-		header: newEntry(nil, nil, limit),
-		rand:   rand.New(rand.NewSource(time.Now().UnixNano())),
+		limit: limit,
+		head:  newEntry(nil, nil, limit),
+		prev:  make([]*entry, limit),
+		rand:  rand.New(rand.NewSource(time.Now().UnixNano())),
 	}
 }
 
@@ -49,53 +54,39 @@ func (s SkipList) random() int {
 }
 
 func (s *SkipList) Set(k, v interface{}) {
-	if s.size == 0 {
-		s.size++
-		s.header.next[0] = newEntry(k, v, 0)
-		return
-	}
-	e := newEntry(k, v, s.random())
-	prev := s.header
-	pres := make([]*entry, e.level+1)
-	for l := s.level; l >= 0; l-- {
+	h, prev := hash(k), s.head
+	for l := s.limit - 1; l >= 0; l-- {
 		next := prev.next[l]
-		for next != nil && e.hash >= next.hash {
-			if e.k == next.k {
-				next.p = e.p
-				return
-			}
+		for next != nil && h >= next.hash {
 			prev = next
 			next = next.next[l]
 		}
-		if l <= e.level {
-			pres[l] = prev
-		}
+		s.prev[l] = prev
 	}
-	for i := 0; i <= e.level; i++ {
-		if pres[i] == nil {
-			e.next[i] = s.header.next[i]
-			s.header.next[i] = e
-		} else {
-			e.next[i] = pres[i].next[i]
-			pres[i].next[i] = e
-		}
+	if prev.k == k {
+		prev.p = unsafe.Pointer(&v)
+		return
 	}
 	s.size++
-	s.level = max(s.level, e.level)
+	e := &entry{k: k, p: unsafe.Pointer(&v), hash: h, next: make([]*entry, s.random()+1)}
+	for i := 0; i <= e.level(); i++ {
+		e.next[i] = s.prev[i].next[i]
+		s.prev[i].next[i] = e
+	}
 }
 
 func (s SkipList) Get(k interface{}) (interface{}, bool) {
-	prev := s.header
+	prev := s.head
 	h := hash(k)
-	for l := s.level; l >= 0; l-- {
+	for l := s.limit - 1; l >= 0; l-- {
 		next := prev.next[l]
 		for next != nil && h >= next.hash {
-			if k == next.k {
-				return next.value(), true
-			}
 			prev = next
 			next = next.next[l]
 		}
+	}
+	if prev.k == k {
+		return prev.value(), true
 	}
 	return nil, false
 }
@@ -104,7 +95,7 @@ func (s SkipList) print() string {
 	buf := bytes.Buffer{}
 	for i := s.level; i >= 0; i-- {
 		buf.WriteString("||->")
-		next := s.header.next[i]
+		next := s.head.next[i]
 		for next != nil {
 			buf.WriteString(fmt.Sprintf("%v", next.value()))
 			buf.WriteString("->")
