@@ -150,31 +150,31 @@ func testSetParallel(b *testing.B, t tester) {
 	})
 }
 
-func BenchmarkSkipList_Set(b *testing.B) { testSet(b, newSkipListTester()) }
-func BenchmarkJumpList_Set(b *testing.B) { testSet(b, newJumpListTester()) }
+func BenchmarkSet_SkipList(b *testing.B) { testSet(b, newSkipListTester()) }
+func BenchmarkSet_JumpList(b *testing.B) { testSet(b, newJumpListTester()) }
 
-func BenchmarkSkipList_SetRandom(b *testing.B) { testSetRandom(b, newSkipListTester()) }
-func BenchmarkJumpList_SetRandom(b *testing.B) { testSetRandom(b, newJumpListTester()) }
+func BenchmarkSetRandom_SkipList(b *testing.B) { testSetRandom(b, newSkipListTester()) }
+func BenchmarkSetRandom_JumpList(b *testing.B) { testSetRandom(b, newJumpListTester()) }
 
-func BenchmarkSkipList_SetAndGet(b *testing.B) { testSetAndGet(b, newSkipListTester()) }
-func BenchmarkJumpList_SetAndGet(b *testing.B) { testSetAndGet(b, newJumpListTester()) }
+func BenchmarkSetAndGet_SkipList(b *testing.B) { testSetAndGet(b, newSkipListTester()) }
+func BenchmarkSetAndGet_JumpList(b *testing.B) { testSetAndGet(b, newJumpListTester()) }
 
-func BenchmarkSkipList_SetRandomAndGetRandom(b *testing.B) {
+func BenchmarkSetRandomAndGetRandom_SkipList(b *testing.B) {
 	testSetRandomAndGetRandom(b, newSkipListTester())
 }
-func BenchmarkJumpList_SetRandomAndGetRandom(b *testing.B) {
+func BenchmarkSetRandomAndGetRandom_JumpList(b *testing.B) {
 	testSetRandomAndGetRandom(b, newJumpListTester())
 }
 
-func BenchmarkSkipList_SetAndGetAsync(b *testing.B) { testSetAndGetAsync(b, newSkipListTester()) }
-func BenchmarkJumpList_SetAndGetAsync(b *testing.B) { testSetAndGetAsync(b, newJumpListTester()) }
+func BenchmarkSetAndGetAsync_SkipList(b *testing.B) { testSetAndGetAsync(b, newSkipListTester()) }
+func BenchmarkSetAndGetAsync_JumpList(b *testing.B) { testSetAndGetAsync(b, newJumpListTester()) }
 
-func BenchmarkSkipList_SetRandomAndGetRandomAsync(b *testing.B) {
+func BenchmarkSetRandomAndGetRandomAsync_SkipList(b *testing.B) {
 	testSetRandomAndGetRandomAsync(b, newSkipListTester())
 }
-func BenchmarkJumpList_SetRandomAndGetRandomAsync(b *testing.B) {
+func BenchmarkSetRandomAndGetRandomAsync_JumpList(b *testing.B) {
 	testSetRandomAndGetRandomAsync(b, newJumpListTester())
 }
 
-func BenchmarkSkipList_SetParallel(b *testing.B) { testSetParallel(b, newSkipListTester()) }
-func BenchmarkJumpList_SetParallel(b *testing.B) { testSetParallel(b, newJumpListTester()) }
+func BenchmarkSetParallel_SkipList(b *testing.B) { testSetParallel(b, newSkipListTester()) }
+func BenchmarkSetParallel_JumpList(b *testing.B) { testSetParallel(b, newJumpListTester()) }
