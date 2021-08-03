@@ -16,15 +16,14 @@ type SkipList struct {
 }
 
 type entry struct {
-	k     interface{}
-	v     interface{}
-	hash  uint64
-	next  []*entry
-	level int
+	k    interface{}
+	v    interface{}
+	hash uint64
+	next []*entry
 }
 
 func newEntry(k, v interface{}, hash uint64, level int) *entry {
-	return &entry{k: k, v: v, hash: hash, level: level, next: make([]*entry, level+1)}
+	return &entry{k: k, v: v, hash: hash, next: make([]*entry, level+1)}
 }
 
 func New(limit int) *SkipList {
@@ -62,7 +61,7 @@ func (s *SkipList) Set(k, v interface{}) {
 		s.prev[l] = prev
 	}
 	e := newEntry(k, v, h, s.random())
-	for i := 0; i <= e.level; i++ {
+	for i := range e.next {
 		e.next[i] = s.prev[i].next[i]
 		s.prev[i].next[i] = e
 	}
@@ -105,7 +104,7 @@ func (s *SkipList) Del(k interface{}) bool {
 	if target == nil {
 		return false
 	}
-	for i := 0; i <= target.level; i++ {
+	for i := range target.next {
 		s.prev[i].next[i] = target.next[i]
 	}
 	s.size--
