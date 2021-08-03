@@ -4,7 +4,6 @@ import (
 	"math/rand"
 	"sync"
 	"time"
-	"unsafe"
 )
 
 type SkipList struct {
@@ -18,18 +17,14 @@ type SkipList struct {
 
 type entry struct {
 	k     interface{}
-	p     unsafe.Pointer
+	v     interface{}
 	hash  uint64
 	next  []*entry
 	level int
 }
 
 func newEntry(k, v interface{}, hash uint64, level int) *entry {
-	return &entry{k: k, p: unsafe.Pointer(&v), hash: hash, level: level, next: make([]*entry, level+1)}
-}
-
-func (e *entry) value() interface{} {
-	return *(*interface{})(e.p)
+	return &entry{k: k, v: v, hash: hash, level: level, next: make([]*entry, level+1)}
 }
 
 func New(limit int) *SkipList {
@@ -58,7 +53,7 @@ func (s *SkipList) Set(k, v interface{}) {
 		next = prev.next[l]
 		for next != nil && h >= next.hash {
 			if h == next.hash && next.k == k {
-				next.p = unsafe.Pointer(&v)
+				next.v = v
 				return
 			}
 			prev = next
@@ -81,7 +76,7 @@ func (s *SkipList) Get(k interface{}) (interface{}, bool) {
 		next := prev.next[l]
 		for next != nil && h >= next.hash {
 			if h == next.hash && next.k == k {
-				return next.value(), true
+				return next.v, true
 			}
 			prev = next
 			next = next.next[l]
