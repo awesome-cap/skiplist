@@ -1,4 +1,4 @@
-github.com/abbychau/jumplist v0.0.0-20210722090223-dc0a454cffc0 h1:ZfkOXKN8CtsQPMQvQaMaV8YU65hde/O+tHNi7pJ4vjA=
-github.com/abbychau/jumplist v0.0.0-20210722090223-dc0a454cffc0/go.mod h1:LyrBHt/TavyG3CbPzkJzuxHLBm1TK5QoSiMB0ztzuUw=
 github.com/abbychau/jumplist v0.0.0-20210731094829-f15ccec02b8e h1:GraiqwZtLw05RBF9tcH4nEim9HjrIDiKC+h7CcDAruM=
 github.com/abbychau/jumplist v0.0.0-20210731094829-f15ccec02b8e/go.mod h1:LyrBHt/TavyG3CbPzkJzuxHLBm1TK5QoSiMB0ztzuUw=
+github.com/sean-public/fast-skiplist v0.0.0-20200308194023-d7f7945b944e h1:w2+6sbUoNbKRno+Gb09RWXezAw0m7kzFI1ickiuVLl4=
+github.com/sean-public/fast-skiplist v0.0.0-20200308194023-d7f7945b944e/go.mod h1:sF4pw7fVg/E9T7KYqdJtxcQQnQMef8E2kgZScnDKHTE=

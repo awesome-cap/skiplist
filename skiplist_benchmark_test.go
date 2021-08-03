@@ -2,6 +2,7 @@ package skiplist
 
 import (
 	"github.com/abbychau/jumplist"
+	"github.com/sean-public/fast-skiplist"
 	"math/rand"
 	"sync"
 	"testing"
@@ -26,11 +27,15 @@ type tester interface {
 }
 
 func newSkipListTester() tester {
-	return &skipListTester{s: New(12)}
+	return &skipListTester{s: New(18)}
 }
 
 func newJumpListTester() tester {
 	return &jumpListTester{s: jumplist.New()}
+}
+
+func newFastListTester() tester {
+	return &fastListTester{s: skiplist.New()}
 }
 
 type skipListTester struct {
@@ -84,6 +89,34 @@ func (s *jumpListTester) SetRand(b *testing.B) {
 }
 
 func (s *jumpListTester) GetRand(b *testing.B) {
+	for j := 0; j < b.N; j++ {
+		s.s.Get(float64(arr[j]))
+	}
+}
+
+type fastListTester struct {
+	s *skiplist.SkipList
+}
+
+func (s *fastListTester) Set(b *testing.B) {
+	for j := 0; j < b.N; j++ {
+		s.s.Set(float64(j), j)
+	}
+}
+
+func (s *fastListTester) Get(b *testing.B) {
+	for j := 0; j < b.N; j++ {
+		s.s.Get(float64(j))
+	}
+}
+
+func (s *fastListTester) SetRand(b *testing.B) {
+	for j := 0; j < b.N; j++ {
+		s.s.Set(float64(arr[j]), arr[j])
+	}
+}
+
+func (s *fastListTester) GetRand(b *testing.B) {
 	for j := 0; j < b.N; j++ {
 		s.s.Get(float64(arr[j]))
 	}
@@ -164,18 +197,23 @@ func testSetParallel(b *testing.B, t tester) {
 
 func BenchmarkSet_SkipList(b *testing.B) { testSet(b, newSkipListTester()) }
 func BenchmarkSet_JumpList(b *testing.B) { testSet(b, newJumpListTester()) }
+func BenchmarkSet_FastList(b *testing.B) { testSet(b, newFastListTester()) }
 
 func BenchmarkGet_SkipList(b *testing.B) { testGet(b, newSkipListTester()) }
 func BenchmarkGet_JumpList(b *testing.B) { testGet(b, newJumpListTester()) }
+func BenchmarkGet_FastList(b *testing.B) { testGet(b, newFastListTester()) }
 
 func BenchmarkSetRandom_SkipList(b *testing.B) { testSetRandom(b, newSkipListTester()) }
 func BenchmarkSetRandom_JumpList(b *testing.B) { testSetRandom(b, newJumpListTester()) }
+func BenchmarkSetRandom_FastList(b *testing.B) { testSetRandom(b, newFastListTester()) }
 
 func BenchmarkGetRandom_SkipList(b *testing.B) { testGetRandom(b, newSkipListTester()) }
 func BenchmarkGetRandom_JumpList(b *testing.B) { testGetRandom(b, newJumpListTester()) }
+func BenchmarkGetRandom_FastList(b *testing.B) { testGetRandom(b, newFastListTester()) }
 
 func BenchmarkSetAndGet_SkipList(b *testing.B) { testSetAndGet(b, newSkipListTester()) }
 func BenchmarkSetAndGet_JumpList(b *testing.B) { testSetAndGet(b, newJumpListTester()) }
+func BenchmarkSetAndGet_FastList(b *testing.B) { testSetAndGet(b, newFastListTester()) }
 
 func BenchmarkSetRandomAndGetRandom_SkipList(b *testing.B) {
 	testSetRandomAndGetRandom(b, newSkipListTester())
@@ -183,9 +221,13 @@ func BenchmarkSetRandomAndGetRandom_SkipList(b *testing.B) {
 func BenchmarkSetRandomAndGetRandom_JumpList(b *testing.B) {
 	testSetRandomAndGetRandom(b, newJumpListTester())
 }
+func BenchmarkSetRandomAndGetRandom_FastList(b *testing.B) {
+	testSetRandomAndGetRandom(b, newFastListTester())
+}
 
 func BenchmarkSetAndGetAsync_SkipList(b *testing.B) { testSetAndGetAsync(b, newSkipListTester()) }
 func BenchmarkSetAndGetAsync_JumpList(b *testing.B) { testSetAndGetAsync(b, newJumpListTester()) }
+func BenchmarkSetAndGetAsync_FastList(b *testing.B) { testSetAndGetAsync(b, newFastListTester()) }
 
 func BenchmarkSetRandomAndGetRandomAsync_SkipList(b *testing.B) {
 	testSetRandomAndGetRandomAsync(b, newSkipListTester())
@@ -193,6 +235,10 @@ func BenchmarkSetRandomAndGetRandomAsync_SkipList(b *testing.B) {
 func BenchmarkSetRandomAndGetRandomAsync_JumpList(b *testing.B) {
 	testSetRandomAndGetRandomAsync(b, newJumpListTester())
 }
+func BenchmarkSetRandomAndGetRandomAsync_FastList(b *testing.B) {
+	testSetRandomAndGetRandomAsync(b, newFastListTester())
+}
 
 func BenchmarkSetParallel_SkipList(b *testing.B) { testSetParallel(b, newSkipListTester()) }
 func BenchmarkSetParallel_JumpList(b *testing.B) { testSetParallel(b, newJumpListTester()) }
+func BenchmarkSetParallel_FastList(b *testing.B) { testSetParallel(b, newFastListTester()) }
